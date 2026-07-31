@@ -1,7 +1,7 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -pthread
-INCLUDES := -Ithird_party -Iinternal
-LDLIBS := -lhiredis
+INCLUDES := -Ithird_party -Iinternal -I$(shell brew --prefix hiredis 2>/dev/null)/include
+LDLIBS := -L$(shell brew --prefix hiredis 2>/dev/null)/lib -lhiredis
 
 SRC := $(shell find internal -name '*.cpp')
 MAIN_SRC := cmd/main.cpp
