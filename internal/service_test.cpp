@@ -5,7 +5,7 @@
 #include <thread>
 #include <vector>
 
-#include "memory_store.h"
+#include "concurrent_store.h"
 #include "service.h"
 
 // 100k "users" try to book the same seat at the same time. Work is spread
@@ -13,7 +13,7 @@
 // practical), but every one of the 100k attempts still goes through
 // svc.Book() concurrently with the others.
 TEST_CASE("concurrent booking: exactly one wins") {
-    booking::MemoryStore store;
+    booking::ConcurrentStore store;
     booking::Service svc(&store);
 
     const int num_attempts = 100'000;
