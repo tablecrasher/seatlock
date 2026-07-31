@@ -14,6 +14,14 @@ public:
         return store_->ListBooking(movie_id);
     }
 
+    Booking ConfirmSeat(const std::string& session_id, const std::string& user_id) {
+        return store_->Confirm(session_id, user_id);
+    }
+
+    void ReleaseSeat(const std::string& session_id, const std::string& user_id) {
+        store_->Release(session_id, user_id);
+    }
+
 private:
     BookingStore* store_;
 };

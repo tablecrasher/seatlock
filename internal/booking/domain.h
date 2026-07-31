@@ -7,6 +7,12 @@
 
 namespace booking {
 
+// Thrown when a session id doesn't resolve to a live hold.
+class SessionNotFoundError : public std::runtime_error {
+public:
+    SessionNotFoundError() : std::runtime_error("session not found") {}
+};
+
 // Thrown when a seat is already taken.
 class SeatAlreadyBookedError : public std::runtime_error {
 public:
@@ -29,6 +35,9 @@ public:
 
     virtual Booking Book(const Booking& b) = 0;
     virtual std::vector<Booking> ListBooking(const std::string& movie_id) = 0;
+
+    virtual Booking Confirm(const std::string& session_id, const std::string& user_id) = 0;
+    virtual void Release(const std::string& session_id, const std::string& user_id) = 0;
 };
 
 }  // namespace booking

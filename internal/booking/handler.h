@@ -11,6 +11,8 @@ public:
 
     void ListSeats(const httplib::Request& req, httplib::Response& res);
     void HoldSeat(const httplib::Request& req, httplib::Response& res);
+    void ConfirmSession(const httplib::Request& req, httplib::Response& res);
+    void ReleaseSession(const httplib::Request& req, httplib::Response& res);
 
 private:
     Service* svc_;

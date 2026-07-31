@@ -52,11 +52,21 @@ int main() {
             [&](const httplib::Request& req, httplib::Response& res) {
                 bookingHandler.ListSeats(req, res);
             });
-            
+
     svr.Post(R"(/movies/([^/]+)/seats/([^/]+)/hold)",
              [&](const httplib::Request& req, httplib::Response& res) {
                  bookingHandler.HoldSeat(req, res);
              });
+
+    svr.Put(R"(/sessions/([^/]+)/confirm)",
+            [&](const httplib::Request& req, httplib::Response& res) {
+                bookingHandler.ConfirmSession(req, res);
+            });
+
+    svr.Delete(R"(/sessions/([^/]+))",
+               [&](const httplib::Request& req, httplib::Response& res) {
+                   bookingHandler.ReleaseSession(req, res);
+               });
 
     std::cout << "listening on :8080" << std::endl;
     if (!svr.listen("0.0.0.0", 8080)) {

@@ -37,6 +37,18 @@ bool parseSession(const std::string& val, Booking* out) {
     }
 }
 
+// sessionKey builds the reverse-lookup key for a session.
+std::string sessionKey(const std::string& id) { return "session:" + id; }
+
+std::string redisGetString(redisContext* ctx, const std::string& key, bool* found) {
+    redisReply* reply = static_cast<redisReply*>(redisCommand(ctx, "GET %s", key.c_str()));
+    std::string result;
+    *found = reply != nullptr && reply->type == REDIS_REPLY_STRING;
+    if (*found) result = reply->str;
+    if (reply) freeReplyObject(reply);
+    return result;
+}
+
 }  // namespace
 
 Booking RedisStore::Book(const Booking& b) {
@@ -83,6 +95,67 @@ std::vector<Booking> RedisStore::ListBooking(const std::string& movie_id) {
     return sessions;
 }
 
+std::pair<Booking, std::string> RedisStore::getSession(const std::string& session_id,
+                                                         const std::string& /*user_id*/) {
+    bool found = false;
+    std::string sk = redisGetString(rdb_->raw(), sessionKey(session_id), &found);
+    if (!found) {
+        throw SessionNotFoundError();
+    }
+
+    bool valFound = false;
+    std::string val = redisGetString(rdb_->raw(), sk, &valFound);
+    if (!valFound) {
+        throw SessionNotFoundError();
+    }
+
+    Booking session;
+    if (!parseSession(val, &session)) {
+        throw SessionNotFoundError();
+    }
+
+    return {session, sk};
+}
+
+Booking RedisStore::Confirm(const std::string& session_id, const std::string& user_id) {
+    std::lock_guard<std::mutex> lock(conn_mu_);
+
+    auto [session, sk] = getSession(session_id, user_id);
+
+    redisReply* p1 = static_cast<redisReply*>(redisCommand(rdb_->raw(), "PERSIST %s", sk.c_str()));
+    if (p1) freeReplyObject(p1);
+    redisReply* p2 = static_cast<redisReply*>(
+        redisCommand(rdb_->raw(), "PERSIST %s", sessionKey(session_id).c_str()));
+    if (p2) freeReplyObject(p2);
+
+    session.status = "confirmed";
+
+    Booking data;
+    data.id = session.id;
+    data.movie_id = session.movie_id;
+    data.seat_id = session.seat_id;
+    data.user_id = session.user_id;
+    data.status = "confirmed";
+    std::string val = toJSON(data);
+
+    redisReply* setReply =
+        static_cast<redisReply*>(redisCommand(rdb_->raw(), "SET %s %s", sk.c_str(), val.c_str()));
+    if (setReply) freeReplyObject(setReply);
+
+    return session;
+}
+
+void RedisStore::Release(const std::string& session_id, const std::string& user_id) {
+    std::lock_guard<std::mutex> lock(conn_mu_);
+
+    auto [session, sk] = getSession(session_id, user_id);
+    (void)session;
+
+    redisReply* delReply = static_cast<redisReply*>(
+        redisCommand(rdb_->raw(), "DEL %s %s", sk.c_str(), sessionKey(session_id).c_str()));
+    if (delReply) freeReplyObject(delReply);
+}
+
 Booking RedisStore::hold(Booking b) {
     std::string id = NewUUID();
     auto now = std::chrono::system_clock::now();
@@ -105,7 +178,7 @@ Booking RedisStore::hold(Booking b) {
         throw SeatAlreadyBookedError();
     }
 
-    std::string sk = "session:" + id;
+    std::string sk = sessionKey(id);
     redisReply* setSession = static_cast<redisReply*>(
         redisCommand(rdb_->raw(), "SET %s %s EX %lld", sk.c_str(), key.c_str(), ttl_seconds));
     if (setSession) freeReplyObject(setSession);

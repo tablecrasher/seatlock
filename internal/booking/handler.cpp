@@ -16,6 +16,7 @@ struct SeatInfo {
     std::string seat_id;
     std::string user_id;
     bool booked;
+    bool confirmed;
 };
 
 void to_json(json& j, const SeatInfo& s) {
@@ -23,6 +24,7 @@ void to_json(json& j, const SeatInfo& s) {
         {"seat_id", s.seat_id},
         {"user_id", s.user_id},
         {"booked", s.booked},
+        {"confirmed", s.confirmed},
     };
 }
 
@@ -83,10 +85,71 @@ void Handler::ListSeats(const httplib::Request& req, httplib::Response& res) {
     std::vector<SeatInfo> seats;
     seats.reserve(bookings.size());
     for (const auto& b : bookings) {
-        seats.push_back(SeatInfo{b.seat_id, b.user_id, true});
+        seats.push_back(SeatInfo{b.seat_id, b.user_id, true, b.status == "confirmed"});
     }
 
     utils::WriteJSON(res, 200, json(seats));
+}
+
+void Handler::ConfirmSession(const httplib::Request& req, httplib::Response& res) {
+    std::string session_id = req.matches[1];
+
+    json body;
+    try {
+        body = json::parse(req.body);
+    } catch (const json::parse_error& e) {
+        std::cerr << e.what() << std::endl;
+        return;
+    }
+
+    std::string user_id = body.value("user_id", "");
+    if (user_id.empty()) {
+        return;
+    }
+
+    Booking session;
+    try {
+        session = svc_->ConfirmSeat(session_id, user_id);
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return;
+    }
+
+    json sessionResponse = {
+        {"session_id", session.id},
+        {"movie_id", session.movie_id},
+        {"seat_id", session.seat_id},
+        {"user_id", user_id},
+        {"status", session.status},
+    };
+
+    utils::WriteJSON(res, 200, sessionResponse);
+}
+
+void Handler::ReleaseSession(const httplib::Request& req, httplib::Response& res) {
+    std::string session_id = req.matches[1];
+
+    json body;
+    try {
+        body = json::parse(req.body);
+    } catch (const json::parse_error& e) {
+        std::cerr << e.what() << std::endl;
+        return;
+    }
+
+    std::string user_id = body.value("user_id", "");
+    if (user_id.empty()) {
+        return;
+    }
+
+    try {
+        svc_->ReleaseSeat(session_id, user_id);
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return;
+    }
+
+    res.status = 204;
 }
 
 }  // namespace booking
