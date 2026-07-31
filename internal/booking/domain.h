@@ -27,7 +27,7 @@ class BookingStore {
 public:
     virtual ~BookingStore() = default;
 
-    virtual void Book(const Booking& b) = 0;
+    virtual Booking Book(const Booking& b) = 0;
     virtual std::vector<Booking> ListBooking(const std::string& movie_id) = 0;
 };
 

@@ -39,9 +39,10 @@ bool parseSession(const std::string& val, Booking* out) {
 
 }  // namespace
 
-void RedisStore::Book(const Booking& b) {
+Booking RedisStore::Book(const Booking& b) {
     Booking session = hold(b);
     std::cout << "Session booked " << session.id << std::endl;
+    return session;
 }
 
 std::vector<Booking> RedisStore::ListBooking(const std::string& movie_id) {

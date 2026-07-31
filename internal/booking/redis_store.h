@@ -20,7 +20,7 @@ class RedisStore : public BookingStore {
 public:
     explicit RedisStore(redis::Client* rdb) : rdb_(rdb) {}
 
-    void Book(const Booking& b) override;
+    Booking Book(const Booking& b) override;
     std::vector<Booking> ListBooking(const std::string& movie_id) override;
 
 private:

@@ -10,7 +10,7 @@ class MemoryStore : public BookingStore {
 public:
     MemoryStore() = default;
 
-    void Book(const Booking& b) override;
+    Booking Book(const Booking& b) override;
     std::vector<Booking> ListBooking(const std::string& movie_id) override;
 
 private:

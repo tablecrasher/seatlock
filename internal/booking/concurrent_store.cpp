@@ -4,13 +4,14 @@
 
 namespace booking {
 
-void ConcurrentStore::Book(const Booking& b) {
+Booking ConcurrentStore::Book(const Booking& b) {
     std::unique_lock lock(mu_);
 
     if (bookings_.count(b.seat_id)) {
         throw SeatAlreadyBookedError();
     }
     bookings_[b.seat_id] = b;
+    return b;
 }
 
 std::vector<Booking> ConcurrentStore::ListBooking(const std::string& movie_id) {

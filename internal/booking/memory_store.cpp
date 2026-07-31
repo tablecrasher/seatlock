@@ -2,11 +2,12 @@
 
 namespace booking {
 
-void MemoryStore::Book(const Booking& b) {
+Booking MemoryStore::Book(const Booking& b) {
     if (bookings_.count(b.seat_id)) {
         throw SeatAlreadyBookedError();
     }
     bookings_[b.seat_id] = b;
+    return b;
 }
 
 std::vector<Booking> MemoryStore::ListBooking(const std::string& movie_id) {
