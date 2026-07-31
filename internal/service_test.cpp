@@ -5,7 +5,8 @@
 #include <thread>
 #include <vector>
 
-#include "concurrent_store.h"
+#include "adapters/redis/redis_client.h"
+#include "redis_store.h"
 #include "service.h"
 
 // 100k "users" try to book the same seat at the same time. Work is spread
@@ -13,7 +14,8 @@
 // practical), but every one of the 100k attempts still goes through
 // svc.Book() concurrently with the others.
 TEST_CASE("concurrent booking: exactly one wins") {
-    booking::ConcurrentStore store;
+    auto rdb = redis::Client::NewClient("localhost:6379");
+    booking::RedisStore store(rdb.get());
     booking::Service svc(&store);
 
     const int num_attempts = 100'000;

@@ -1,17 +1,18 @@
 #pragma once
 
 #include "domain.h"
+#include "redis_store.h"
 
 namespace booking {
 
 class Service {
 public:
-    explicit Service(BookingStore* store) : store_(store) {}
+    explicit Service(RedisStore* store) : store_(store) {}
 
     void Book(const Booking& b) { store_->Book(b); }
 
 private:
-    BookingStore* store_;
+    RedisStore* store_;
 };
 
 }  // namespace booking

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -19,6 +20,7 @@ struct Booking {
     std::string seat_id;
     std::string user_id;
     std::string status;
+    std::chrono::system_clock::time_point expires_at;
 };
 
 class BookingStore {

@@ -1,8 +1,9 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -pthread
 INCLUDES := -Ithird_party -Iinternal
+LDLIBS := -lhiredis
 
-SRC := $(wildcard internal/*.cpp) $(wildcard internal/**/*.cpp)
+SRC := $(shell find internal -name '*.cpp')
 MAIN_SRC := cmd/main.cpp
 TEST_SRC := internal/service_test.cpp
 
