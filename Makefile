@@ -5,7 +5,7 @@ LDLIBS := -lhiredis
 
 SRC := $(shell find internal -name '*.cpp')
 MAIN_SRC := cmd/main.cpp
-TEST_SRC := internal/service_test.cpp
+TEST_SRC := internal/booking/service_test.cpp
 
 LIB_SRC := $(filter-out $(TEST_SRC),$(SRC))
 

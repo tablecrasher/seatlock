@@ -1,5 +1,10 @@
 #include <iostream>
 
+#include "../internal/adapters/redis/redis_client.h"
+#include "../internal/booking/handler.h"
+#include "../internal/booking/redis_store.h"
+#include "../internal/booking/service.h"
+#include "../internal/utils/utils.h"
 #include "../third_party/httplib.h"
 #include "../third_party/json.hpp"
 
@@ -26,21 +31,27 @@ static const std::vector<MovieResponse> movies = {
     {"jurassicworld", "Jurassic World", 4, 6},
 };
 
-void WriteJSON(httplib::Response& res, int status, const json& v) {
-    res.status = status;
-    res.set_content(v.dump(), "application/json");
-}
-
 void listMovies(const httplib::Request&, httplib::Response& res) {
-    WriteJSON(res, 200, json(movies));
+    utils::WriteJSON(res, 200, json(movies));
 }
 
 int main() {
     httplib::Server svr;
 
     svr.Get("/movies", listMovies);
-    
+
     svr.set_mount_point("/", "./static");
+
+    auto rdb = redis::Client::NewClient("localhost:6379");
+    booking::RedisStore store(rdb.get());
+    booking::Service svc(&store);
+
+    booking::Handler bookingHandler(&svc);
+
+    svr.Get(R"(/movies/([^/]+)/seats)",
+            [&](const httplib::Request& req, httplib::Response& res) {
+                bookingHandler.ListSeats(req, res);
+            });
 
     std::cout << "listening on :8080" << std::endl;
     if (!svr.listen("0.0.0.0", 8080)) {

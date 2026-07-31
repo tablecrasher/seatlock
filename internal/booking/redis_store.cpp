@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include "../third_party/json.hpp"
+#include "json.hpp"
 #include "uuid.h"
 
 namespace booking {
@@ -23,6 +23,20 @@ std::string toJSON(const Booking& b) {
     return j.dump();
 }
 
+bool parseSession(const std::string& val, Booking* out) {
+    try {
+        json j = json::parse(val);
+        out->id = j.value("id", "");
+        out->movie_id = j.value("movie_id", "");
+        out->seat_id = j.value("seat_id", "");
+        out->user_id = j.value("user_id", "");
+        out->status = j.value("status", "");
+        return true;
+    } catch (const json::parse_error&) {
+        return false;
+    }
+}
+
 }  // namespace
 
 void RedisStore::Book(const Booking& b) {
@@ -30,8 +44,42 @@ void RedisStore::Book(const Booking& b) {
     std::cout << "Session booked " << session.id << std::endl;
 }
 
-std::vector<Booking> RedisStore::ListBooking(const std::string& /*movie_id*/) {
-    return {};
+std::vector<Booking> RedisStore::ListBooking(const std::string& movie_id) {
+    std::string pattern = "seat:" + movie_id + "*";
+    std::vector<Booking> sessions;
+
+    std::lock_guard<std::mutex> lock(conn_mu_);
+
+    long long cursor = 0;
+    do {
+        redisReply* reply = static_cast<redisReply*>(redisCommand(
+            rdb_->raw(), "SCAN %lld MATCH %s", cursor, pattern.c_str()));
+        if (reply == nullptr || reply->type != REDIS_REPLY_ARRAY || reply->elements != 2) {
+            if (reply) freeReplyObject(reply);
+            break;
+        }
+
+        cursor = std::stoll(reply->element[0]->str);
+        redisReply* keys = reply->element[1];
+
+        for (size_t i = 0; i < keys->elements; i++) {
+            redisReply* getReply = static_cast<redisReply*>(
+                redisCommand(rdb_->raw(), "GET %s", keys->element[i]->str));
+            if (getReply == nullptr) continue;
+
+            if (getReply->type == REDIS_REPLY_STRING) {
+                Booking session;
+                if (parseSession(getReply->str, &session)) {
+                    sessions.push_back(session);
+                }
+            }
+            freeReplyObject(getReply);
+        }
+
+        freeReplyObject(reply);
+    } while (cursor != 0);
+
+    return sessions;
 }
 
 Booking RedisStore::hold(Booking b) {
