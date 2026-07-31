@@ -39,6 +39,8 @@ int main() {
     httplib::Server svr;
 
     svr.Get("/movies", listMovies);
+    
+    svr.set_mount_point("/", "./static");
 
     std::cout << "listening on :8080" << std::endl;
     if (!svr.listen("0.0.0.0", 8080)) {
